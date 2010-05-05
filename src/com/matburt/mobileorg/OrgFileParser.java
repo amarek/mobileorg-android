@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
+
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -75,20 +76,6 @@ class OrgFileParser {
     	return component;
     }
 
-    private String stripTitle(String orgTitle) {
-        Pattern titlePattern = Pattern.compile("<before.*</before>|<after.*</after>");
-        Matcher titleMatcher = titlePattern.matcher(orgTitle);
-        String newTitle = "";
-        if (titleMatcher.find()) {
-            newTitle += orgTitle.substring(0, titleMatcher.start());
-            newTitle += orgTitle.substring(titleMatcher.end(), orgTitle.length());
-        }
-        else {
-            newTitle = orgTitle;
-        }
-        return newTitle;
-    }
-
     public void parse() {
         String thisLine;
         Stack<Node> nodeStack = new Stack();
@@ -130,7 +117,7 @@ class OrgFileParser {
                     //headings
                     if (numstars > 0) {
                         String title = thisLine.substring(numstars+1);
-                        TitleComponents titleComp = parseTitle(this.stripTitle(title));
+                        TitleComponents titleComp = parseTitle(title);
                         Node newNode = new Node(titleComp.title, Node.NodeType.HEADING);
                         newNode.todo = titleComp.todo;
                         newNode.tags.addAll(titleComp.tags);
