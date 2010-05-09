@@ -221,8 +221,13 @@ public class MobileOrgActivity extends ListActivity
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
-        appInst.nodeSelection.remove(appInst.nodeSelection.size()-1);
+        if (requestCode == 3) {
+            this.runParser();
+        }
+        else {
+            MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
+            appInst.nodeSelection.remove(appInst.nodeSelection.size()-1);
+        }
     }
 
     public boolean onShowSettings() {
@@ -237,7 +242,17 @@ public class MobileOrgActivity extends ListActivity
         final Synchronizer appSync = new WebDAVSynchronizer(this);
         Thread syncThread = new Thread() {
                 public void run() {
-                    syncResults = appSync.pull();
+                    boolean pullResult = appSync.pull();
+                    boolean pushResult = appSync.push();
+                    syncResults = true;
+                    if (!pullResult) {
+                        Log.e(LT, "Pull Synchronization fail");
+                        syncResults = false;
+                    }
+                    if (!pushResult) {
+                        Log.e(LT, "Push Synchronization fail");
+                        syncResults = false;
+                    }
                     syncHandler.post(syncUpdateResults);
             }
         };
@@ -250,7 +265,7 @@ public class MobileOrgActivity extends ListActivity
         Intent captureIntent = new Intent();
         captureIntent.setClassName("com.matburt.mobileorg",
                                    "com.matburt.mobileorg.Capture");
-        startActivity(captureIntent);
+        startActivityForResult(captureIntent, 3);
         return true;
     }
 
