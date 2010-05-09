@@ -40,13 +40,13 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 import android.os.Environment;
 
-public class Synchronizer
+public class WebDAVSynchronizer implements Synchronizer
 {
     private Map<String, String> appSettings;
     private Activity rootActivity;
     private static final String LT = "MobileOrg";
 
-    Synchronizer(Activity parentActivity) {
+    WebDAVSynchronizer(Activity parentActivity) {
         this.rootActivity = parentActivity;
         this.appSettings = new HashMap<String, String>();
         if (this.populateApplicationSettings() == -1) {

@@ -66,4 +66,9 @@ public class SVNSynchronizer implements Synchronizer
             
         return true;
     }
+
+    public boolean push()
+    {
+        return false;
+    }
 }
