@@ -22,6 +22,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.text.TextUtils;
 import android.util.Log;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.lang.Runnable;
 import android.database.Cursor;
@@ -110,6 +112,7 @@ public class MobileOrgActivity extends ListActivity
     private static final int OP_MENU_OUTLINE = 3;
     private static final int OP_MENU_CAPTURE = 4;
     private static final String LT = "MobileOrg";
+    private Map<String, String> appSettings;
     private ProgressDialog syncDialog;
     final Handler syncHandler = new Handler();
     final Runnable syncUpdateResults = new Runnable() {
@@ -124,6 +127,7 @@ public class MobileOrgActivity extends ListActivity
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        this.appSettings = new HashMap<String, String>();
         this.initializeTables();
         ListView lv = this.getListView();
         lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener
@@ -238,8 +242,34 @@ public class MobileOrgActivity extends ListActivity
         return true;
     }
 
+    public int populateApplicationSettings() {
+
+        SQLiteDatabase appdb = this.openOrCreateDatabase("MobileOrg", 0, null);
+        Cursor result = appdb.rawQuery("SELECT * FROM settings", null);
+        int rc = 0;
+        if (result != null) {
+            if (result.getCount() > 0) {
+                result.moveToFirst();
+                do {
+                    this.appSettings.put(result.getString(0),
+                                         result.getString(1));
+                } while (result.moveToNext());
+            }
+            else {
+                rc = -1;// need to start settings display
+            }
+        }
+        else {
+            rc =  -1;// need to start settings display
+        }
+        result.close();
+        appdb.close();
+        return rc;
+    }
+
     public void runSynchronizer() {
-        final Synchronizer appSync = new WebDAVSynchronizer(this);
+        populateApplicationSettings();
+        final Synchronizer appSync = new SVNSynchronizer(this, appSettings);
         Thread syncThread = new Thread() {
                 public void run() {
                     boolean pullResult = appSync.pull();
