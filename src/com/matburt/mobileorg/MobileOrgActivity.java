@@ -1,11 +1,13 @@
 package com.matburt.mobileorg;
 
 import android.app.ListActivity;
+import android.app.Activity;
 import android.app.Application;
 import android.app.ProgressDialog;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.lang.Runnable;
+import java.io.File;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
@@ -107,10 +110,15 @@ public class MobileOrgActivity extends ListActivity
         }
     }
 
+    private static final int ACTIVITY_DISPLAY = 1;
+    private static final int ACTIVITY_CAPTURE = 3;
+    private static final int ACTIVITY_FILE = 4;
+
     private static final int OP_MENU_SETTINGS = 1;
     private static final int OP_MENU_SYNC = 2;
     private static final int OP_MENU_OUTLINE = 3;
     private static final int OP_MENU_CAPTURE = 4;
+    private static final int OP_MENU_FILE = 5;
     private static final String LT = "MobileOrg";
     private Map<String, String> appSettings;
     private ProgressDialog syncDialog;
@@ -171,6 +179,7 @@ public class MobileOrgActivity extends ListActivity
         menu.add(0, MobileOrgActivity.OP_MENU_CAPTURE, 0, "Capture");
         menu.add(0, MobileOrgActivity.OP_MENU_SYNC, 0, "Sync");
         menu.add(0, MobileOrgActivity.OP_MENU_SETTINGS, 0, "Settings");
+        menu.add(0, MobileOrgActivity.OP_MENU_FILE, 0, "File");
         return true;
     }
 
@@ -219,29 +228,60 @@ public class MobileOrgActivity extends ListActivity
         }
         else {
             dispIntent.putIntegerArrayListExtra("nodePath", selection);
-            startActivityForResult(dispIntent, 1);
+            startActivityForResult(dispIntent, ACTIVITY_DISPLAY);
         }
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 3) {
-            this.runParser();
-        }
-        else {
-            MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
-            appInst.nodeSelection.remove(appInst.nodeSelection.size()-1);
+        Log.i(LT, "Sub activity " + requestCode + " completed");
+        super.onActivityResult(requestCode, resultCode, data); 
+        switch(requestCode) {            
+            case (ACTIVITY_FILE): 
+            { 
+                if (resultCode == Activity.RESULT_OK) { 
+                    String file = data.getStringExtra("FILE");
+                    Log.i(LT, "Selected file: " + file);
+                } 
+                break; 
+            } 
+            case (ACTIVITY_CAPTURE):
+            {
+                this.runParser();
+            }
+            case (ACTIVITY_DISPLAY):
+            {
+                MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
+                appInst.nodeSelection.remove(appInst.nodeSelection.size()-1);
+            }
         }
     }
 
     public boolean onShowSettings() {
-        Intent settingsIntent = new Intent();
+        Intent settingsIntent = new Intent();        
         settingsIntent.setClassName("com.matburt.mobileorg",
                                     "com.matburt.mobileorg.SettingsActivity");
         startActivity(settingsIntent);
         return true;
     }
 
+    protected String getStorageFolder()
+    {
+        File root = Environment.getExternalStorageDirectory();   
+        File morgDir = new File(root, "mobileorg");
+        return morgDir.getAbsolutePath();
+    }
+
+    public boolean onSelectFile()
+    {
+
+        Intent fileIntent = new Intent();
+        fileIntent.putExtra("FOLDER",getStorageFolder());
+        fileIntent.setClassName("com.matburt.mobileorg",
+                                "com.matburt.mobileorg.SelectFileActivity");
+        startActivityForResult(fileIntent, ACTIVITY_FILE);
+        return true;
+    }
     public int populateApplicationSettings() {
 
         SQLiteDatabase appdb = this.openOrCreateDatabase("MobileOrg", 0, null);
@@ -295,7 +335,7 @@ public class MobileOrgActivity extends ListActivity
         Intent captureIntent = new Intent();
         captureIntent.setClassName("com.matburt.mobileorg",
                                    "com.matburt.mobileorg.Capture");
-        startActivityForResult(captureIntent, 3);
+        startActivityForResult(captureIntent, ACTIVITY_CAPTURE);
         return true;
     }
 
@@ -336,6 +376,8 @@ public class MobileOrgActivity extends ListActivity
             return true;
         case MobileOrgActivity.OP_MENU_CAPTURE:
             return this.runCapture();
+        case MobileOrgActivity.OP_MENU_FILE:
+            return this.onSelectFile();
         }
         return false;
     }

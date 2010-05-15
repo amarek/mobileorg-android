@@ -35,11 +35,11 @@ class CustomSVNKitLogger extends SVNDebugLogAdapter {
     }
 
     public void log(SVNLogType logType, String message, byte[] data) {
-        Log.i("mobileorg",message + " " + new String(data));    
+        //        Log.i("mobileorg",message + " " + new String(data));    
     }
 
     public void log(SVNLogType logType, String message, Level logLevel) {
-       Log.i("mobileorg",message);    
+       Log.i("MobileOrg",message);    
     }
     public void log(SVNLogType logType, Throwable th, Level logLevel) {
         StringWriter sw = new StringWriter();
@@ -47,7 +47,7 @@ class CustomSVNKitLogger extends SVNDebugLogAdapter {
         th.printStackTrace(pw);
         pw.flush();
         sw.flush();
-        Log.e("mobileorg","Exc:" + th + sw.toString());        
+        Log.e("MobileOrg","Exc:" + th + sw.toString());        
     }
 }
 
