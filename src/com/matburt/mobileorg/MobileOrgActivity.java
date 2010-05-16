@@ -242,18 +242,20 @@ public class MobileOrgActivity extends ListActivity
                 if (resultCode == Activity.RESULT_OK) { 
                     String file = data.getStringExtra("FILE");
                     Log.i(LT, "Selected file: " + file);
-                } 
-                break; 
+                }
             } 
+            break;
             case (ACTIVITY_CAPTURE):
             {
                 this.runParser();
             }
+            break;
             case (ACTIVITY_DISPLAY):
             {
                 MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
                 appInst.nodeSelection.remove(appInst.nodeSelection.size()-1);
             }
+            break;
         }
     }
 
@@ -269,7 +271,7 @@ public class MobileOrgActivity extends ListActivity
     {
         File root = Environment.getExternalStorageDirectory();   
         File morgDir = new File(root, "mobileorg");
-        return morgDir.getAbsolutePath();
+        return morgDir.getAbsolutePath() + "/";
     }
 
     public boolean onSelectFile()
@@ -309,7 +311,7 @@ public class MobileOrgActivity extends ListActivity
 
     public void runSynchronizer() {
         populateApplicationSettings();
-        final Synchronizer appSync = new SVNSynchronizer(this, appSettings);
+        final Synchronizer appSync = new SVNSynchronizer(this, appSettings.get("webUrl"), getStorageFolder());
         Thread syncThread = new Thread() {
                 public void run() {
                     boolean pullResult = appSync.pull();

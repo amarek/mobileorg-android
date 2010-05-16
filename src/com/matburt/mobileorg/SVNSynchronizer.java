@@ -61,8 +61,10 @@ public class SVNSynchronizer implements Synchronizer
 
     private static SVNClientManager ourClientManager;
     private static final String LT = "MobileOrg";
+    private String storageDir;
+    private String webUrl;
 
-    SVNSynchronizer(Activity parentActivity, Map<String, String> appSettings)
+    SVNSynchronizer(Activity parentActivity, String webUrl, String storageDir)
     {
         DAVRepositoryFactory.setup();
         ISVNOptions options = SVNWCUtil.createDefaultOptions( true );
@@ -70,24 +72,21 @@ public class SVNSynchronizer implements Synchronizer
         ourClientManager = SVNClientManager.newInstance( options , authManager );
         this.activity = parentActivity;
         this.appSettings = appSettings;
+        this.webUrl = webUrl;
+        this.storageDir = storageDir;
         ISVNDebugLog customLogger = new CustomSVNKitLogger();
         SVNDebugLog.setDefaultLog(customLogger);
     }
 
     public boolean pull()
     {
-        // Pattern checkUrl = Pattern.compile("http.*\\.(?:org|txt)$");
-        // if (!checkUrl.matcher(this.appSettings.get("webUrl")).find()) {
-        //     Log.e(LT, "Bad URL");
-        //     return false;
-        // }
-        Log.i(LT,"pull from " + appSettings.get("webUrl"));
+        Log.i(LT,"pull from " + webUrl);
         SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
         updateClient.setIgnoreExternals(false);
         SVNURL repositoryURL = null;
         File morgDir = null;
         try {
-            repositoryURL = SVNURL.parseURIEncoded(appSettings.get("webUrl"));
+            repositoryURL = SVNURL.parseURIEncoded(webUrl);
         } 
         catch (SVNException e) {
             Log.e(LT, "Exception: " + e);
@@ -95,8 +94,7 @@ public class SVNSynchronizer implements Synchronizer
         }
 
         try {
-            File root = Environment.getExternalStorageDirectory();   
-            morgDir = new File(root, "mobileorg");
+            morgDir = new File(storageDir);
             morgDir.mkdir();
 
             updateClient.doCheckout(repositoryURL, morgDir, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, false);
@@ -140,6 +138,17 @@ public class SVNSynchronizer implements Synchronizer
 
     public boolean push()
     {
+        Log.i(LT,"Commiting repository at " + storageDir);
+        try {
+            long rev = ourClientManager.getCommitClient().doCommit(new File[] { new File(storageDir) }, false,
+                                                                   "MobileOrg commit", false, true).getNewRevision();
+            Log.i(LT, "Commited revision:" + rev);
+        }
+        catch(SVNException e) {
+            Log.e(LT, "SVNException: " + e + ":" + e.getMessage());
+            return false;
+        }
+
         return true;
     }
 }
