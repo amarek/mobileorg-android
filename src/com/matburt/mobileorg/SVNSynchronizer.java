@@ -3,6 +3,9 @@ package com.matburt.mobileorg;
 import android.app.Activity;
 import android.util.Log;
 import android.os.Environment;
+import android.database.Cursor;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteDatabase;
 
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -82,6 +85,7 @@ public class SVNSynchronizer implements Synchronizer
         SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
         updateClient.setIgnoreExternals(false);
         SVNURL repositoryURL = null;
+        File morgDir = null;
         try {
             repositoryURL = SVNURL.parseURIEncoded(appSettings.get("webUrl"));
         } 
@@ -92,7 +96,7 @@ public class SVNSynchronizer implements Synchronizer
 
         try {
             File root = Environment.getExternalStorageDirectory();   
-            File morgDir = new File(root, "mobileorg");
+            morgDir = new File(root, "mobileorg");
             morgDir.mkdir();
 
             updateClient.doCheckout(repositoryURL, morgDir, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, false);
@@ -101,8 +105,37 @@ public class SVNSynchronizer implements Synchronizer
             Log.e(LT, "SVNException: " + e + ":" + e.getMessage());
             return false;
         }
-            
+        addOrUpdateFiles(morgDir);
         return true;
+    }
+
+    protected void addOrUpdateFiles(File folder) {
+        File[] files = folder.listFiles();
+        SQLiteDatabase appdb = this.activity.openOrCreateDatabase("MobileOrg",
+                                                                  0, null);
+        for(File file : files)
+        {
+            if(!file.getName().endsWith(".org"))
+            {
+                continue;
+            }
+            String name = file.getName();
+            String filename = file.getName();
+            Cursor result = appdb.rawQuery("SELECT * FROM files " +
+                                           "WHERE file = '"+filename+"'", null);
+            if (result != null) {
+                if (result.getCount() > 0) {
+                    appdb.execSQL("UPDATE files set name = '"+name+"', "+
+                                  "checksum = '' where file = '"+filename+"'");
+                }
+                else {
+                    appdb.execSQL("INSERT INTO files (file, name, checksum) " +
+                                  "VALUES ('"+filename+"','"+name+"','')");
+                }
+            }
+            result.close();
+        }
+        appdb.close();
     }
 
     public boolean push()
