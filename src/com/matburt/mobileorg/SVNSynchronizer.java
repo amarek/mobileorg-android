@@ -138,17 +138,22 @@ public class SVNSynchronizer implements Synchronizer
 
     public boolean push()
     {
+
         Log.i(LT,"Commiting repository at " + storageDir);
         try {
-            long rev = ourClientManager.getCommitClient().doCommit(new File[] { new File(storageDir) }, false,
+            File file = new File(storageDir + "mobileorg.org");
+            if(!file.exists())
+            {
+                return true;
+            }
+            ourClientManager.getWCClient().doAdd(file, false, false, false, true);
+            long rev = ourClientManager.getCommitClient().doCommit(new File[] { file }, false,
                                                                    "MobileOrg commit", false, true).getNewRevision();
             Log.i(LT, "Commited revision:" + rev);
         }
         catch(SVNException e) {
             Log.e(LT, "SVNException: " + e + ":" + e.getMessage());
-            return false;
         }
-
         return true;
     }
 }

@@ -22,6 +22,7 @@ import android.widget.AdapterView;
 import android.content.Intent;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Log;
 import java.util.Map;
@@ -32,6 +33,7 @@ import java.io.File;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.content.SharedPreferences;
 
 public class MobileOrgActivity extends ListActivity
 {
@@ -64,14 +66,6 @@ public class MobileOrgActivity extends ListActivity
             return this.thisNode.subNodes.size();
         }
 
-        /**
-         * Since the data comes from an array, just returning the index is
-         * sufficent to get at the data. If we were using a more complex data
-         * structure, we would return whatever object represents one row in the
-         * list.
-         *
-         * @see android.widget.ListAdapter#getItem(int)
-         */
         public Object getItem(int position) {
             return position;
         }
@@ -120,24 +114,24 @@ public class MobileOrgActivity extends ListActivity
     private static final int OP_MENU_CAPTURE = 4;
     private static final int OP_MENU_FILE = 5;
     private static final String LT = "MobileOrg";
-    private Map<String, String> appSettings;
     private ProgressDialog syncDialog;
+    public boolean syncResults;
+    public SharedPreferences appSettings;
     final Handler syncHandler = new Handler();
     final Runnable syncUpdateResults = new Runnable() {
         public void run() {
             postSynchronize();
         }
     };
-    public boolean syncResults;
 
-    /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        this.appSettings = new HashMap<String, String>();
         this.initializeTables();
         ListView lv = this.getListView();
+        appSettings = PreferenceManager.getDefaultSharedPreferences(
+                                       getBaseContext());
         lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener
                                       (){
                 @Override
@@ -147,6 +141,9 @@ public class MobileOrgActivity extends ListActivity
                     return true;
                 }
             });
+        if (this.appSettings.getString("webUrl","").equals("")) {
+            this.onShowSettings();
+        }
     }
 
     public void runParser() {
@@ -284,42 +281,20 @@ public class MobileOrgActivity extends ListActivity
         startActivityForResult(fileIntent, ACTIVITY_FILE);
         return true;
     }
-    public int populateApplicationSettings() {
-
-        SQLiteDatabase appdb = this.openOrCreateDatabase("MobileOrg", 0, null);
-        Cursor result = appdb.rawQuery("SELECT * FROM settings", null);
-        int rc = 0;
-        if (result != null) {
-            if (result.getCount() > 0) {
-                result.moveToFirst();
-                do {
-                    this.appSettings.put(result.getString(0),
-                                         result.getString(1));
-                } while (result.moveToNext());
-            }
-            else {
-                rc = -1;// need to start settings display
-            }
-        }
-        else {
-            rc =  -1;// need to start settings display
-        }
-        result.close();
-        appdb.close();
-        return rc;
-    }
 
     public void runSynchronizer() {
-        populateApplicationSettings();
-        final Synchronizer appSync = new SVNSynchronizer(this, appSettings.get("webUrl"), getStorageFolder());
+        final Synchronizer appSync = new SVNSynchronizer(this, appSettings.getString("webUrl",""), getStorageFolder());
         Thread syncThread = new Thread() {
                 public void run() {
                     boolean pullResult = appSync.pull();
-                    boolean pushResult = appSync.push();
+                    boolean pushResult = false;
                     syncResults = true;
                     if (!pullResult) {
                         Log.e(LT, "Pull Synchronization fail");
                         syncResults = false;
+                    }
+                    else {
+                        pushResult = appSync.push();
                     }
                     if (!pushResult) {
                         Log.e(LT, "Push Synchronization fail");
@@ -385,19 +360,7 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public String getStorageLocation() {
-        SQLiteDatabase appdb = this.openOrCreateDatabase("MobileOrg",
-                                                         MODE_PRIVATE, null);
-        Cursor result = appdb.rawQuery("SELECT val from settings where key='storage'", null);
-        String val = null;
-        if (result != null) {
-            if (result.getCount() > 0) {
-                result.moveToFirst();
-                val = result.getString(0);
-            }
-        }
-        appdb.close();
-        result.close();
-        return val;
+        return this.appSettings.getString("storageMode", "");
     }
 
     public ArrayList<String> getOrgFiles() {
@@ -422,8 +385,6 @@ public class MobileOrgActivity extends ListActivity
     public void initializeTables() {
         SQLiteDatabase appdb = this.openOrCreateDatabase("MobileOrg",
                                                          MODE_PRIVATE, null);
-        appdb.execSQL("CREATE TABLE IF NOT EXISTS settings"
-                      + " (key VARCHAR, val VARCHAR)");
         appdb.execSQL("CREATE TABLE IF NOT EXISTS files"
                       + " (file VARCHAR, name VARCHAR,"
                       + " checksum VARCHAR);");
