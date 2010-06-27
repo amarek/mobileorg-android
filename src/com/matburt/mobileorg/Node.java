@@ -20,10 +20,13 @@ class Node {
     String nodePayload = "";
     Date schedule = null;
     Date deadline = null;
+    boolean encrypted = false;
+    boolean parsed = false;
 
-    Node(String heading, NodeType ntype) {
+    Node(String heading, NodeType ntype, boolean encrypted) {
         nodeName = heading;
         nodeType = ntype;
+        this.encrypted = encrypted;
     }
 
     Node findChildNode(String regex) {

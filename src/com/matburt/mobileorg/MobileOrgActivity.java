@@ -1,6 +1,7 @@
 package com.matburt.mobileorg;
 
 import android.app.ListActivity;
+import android.app.Dialog;
 import android.app.Activity;
 import android.app.Application;
 import android.app.ProgressDialog;
@@ -147,11 +148,18 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runParser() {
+        try {
+            Encryption.importKeyRings("/sdcard/secring.gpg");
+        }
+        catch(Exception ex)
+        {
+            Log.e(LT, "Exception: " + ex.getMessage());
+        }
         MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
         ArrayList<String> allOrgList = this.getOrgFiles();
         String storageMode = this.getStorageLocation();
-        OrgFileParser ofp = new OrgFileParser(allOrgList, storageMode);
-        ofp.parse();
+        OrgFileParser ofp = new OrgFileParser(storageMode);
+        ofp.parse(allOrgList);
         appInst.rootNode = ofp.rootNode;
     }
 
@@ -213,6 +221,18 @@ public class MobileOrgActivity extends ListActivity
                 thisNode = thisNode.subNodes.get(selection.get(idx));
             }
         }
+
+        if(thisNode.encrypted && !thisNode.parsed)
+        {
+            if(Encryption.passPhrase == null)
+            {
+                showDialog(0);
+                return;
+            }
+            OrgFileParser ofp = new OrgFileParser(getStorageLocation());
+            ofp.parse(thisNode);
+        }
+
         if (thisNode.subNodes.size() < 1) {
             Intent textIntent = new Intent();
 
@@ -390,5 +410,9 @@ public class MobileOrgActivity extends ListActivity
                       + " checksum VARCHAR);");
         appdb.close();
 
+    }
+
+    protected Dialog onCreateDialog(int id) {
+        return Encryption.passPhraseDialog(this);
     }
 }

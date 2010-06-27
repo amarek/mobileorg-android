@@ -113,7 +113,8 @@ public class SVNSynchronizer implements Synchronizer
                                                                   0, null);
         for(File file : files)
         {
-            if(!file.getName().endsWith(".org"))
+            if(!file.getName().endsWith(".org") &&
+               !file.getName().endsWith(".org.gpg"))
             {
                 continue;
             }
