@@ -142,7 +142,7 @@ class Encryption
         return alert.create();        
     }
 
-    public static boolean decrypt(PositionAwareInputStream inStream, 
+    public static boolean decrypt(InputStream inStream, 
                                   OutputStream outStream,
                                   String passPhrase, boolean assumeSymmetric)
         throws IOException, Exception, PGPException, SignatureException 
@@ -264,7 +264,6 @@ class Encryption
 
             int n = 0;
             int done = 0;
-            long startPos = inStream.position();
             while ((n = dataIn.read(buffer)) > 0) {
                 out.write(buffer, 0, n);
                 done += n;

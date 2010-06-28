@@ -215,9 +215,8 @@ class OrgFileParser {
             }
             else
             {
-                PositionAwareInputStream in = new PositionAwareInputStream(this.fstream);                
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                Encryption.decrypt(in, out, Encryption.passPhrase, false);
+                Encryption.decrypt(this.fstream, out, Encryption.passPhrase, false);
                 breader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(out.toByteArray())));
             }
         }
