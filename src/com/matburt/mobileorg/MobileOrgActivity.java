@@ -36,7 +36,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.content.SharedPreferences;
 
-public class MobileOrgActivity extends ListActivity
+public class MobileOrgActivity extends ListActivity implements Encryption.PassPhraseCallbackInterface
 {
     private static class OrgViewAdapter extends BaseAdapter {
 
@@ -118,6 +118,7 @@ public class MobileOrgActivity extends ListActivity
     private ProgressDialog syncDialog;
     public boolean syncResults;
     public SharedPreferences appSettings;
+    private ArrayList<Integer> selection;
     final Handler syncHandler = new Handler();
     final Runnable syncUpdateResults = new Runnable() {
         public void run() {
@@ -146,6 +147,7 @@ public class MobileOrgActivity extends ListActivity
             this.onShowSettings();
         }
     }
+    
 
     public void runParser() {
         try {
@@ -202,17 +204,38 @@ public class MobileOrgActivity extends ListActivity
         startActivity(dispIntent);
     }
 
-    @Override
-    public void onListItemClick(ListView l, View v, int position, long id) {
-        Intent dispIntent = new Intent();
+    public void passPhraseCallback()
+    {
         MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
+        Node thisNode = appInst.rootNode;
+        if (selection != null) {
+            for (int idx = 0; idx < selection.size(); idx++) {
+                thisNode = thisNode.subNodes.get(selection.get(idx));
+            }
+        }
+        OrgFileParser ofp = new OrgFileParser(getStorageLocation());
+        ofp.parse(thisNode);
+        expandSelection();
+    }
+    
+    public void expandSelection()
+    {
+        Intent dispIntent = new Intent();
         dispIntent.setClassName("com.matburt.mobileorg",
                                 "com.matburt.mobileorg.MobileOrgActivity");
+        dispIntent.putIntegerArrayListExtra("nodePath", selection);
+        startActivityForResult(dispIntent, ACTIVITY_DISPLAY);        
+    }
+
+    @Override
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
+
         if (appInst.nodeSelection == null) {
             appInst.nodeSelection = new ArrayList<Integer>();
         }
 
-        ArrayList<Integer> selection = new ArrayList<Integer>(appInst.nodeSelection);
+        selection = new ArrayList<Integer>(appInst.nodeSelection);
         selection.add(new Integer(position));
 
         Node thisNode = appInst.rootNode;
@@ -244,8 +267,7 @@ public class MobileOrgActivity extends ListActivity
             startActivity(textIntent);
         }
         else {
-            dispIntent.putIntegerArrayListExtra("nodePath", selection);
-            startActivityForResult(dispIntent, ACTIVITY_DISPLAY);
+            expandSelection();
         }
     }
 
@@ -413,6 +435,6 @@ public class MobileOrgActivity extends ListActivity
     }
 
     protected Dialog onCreateDialog(int id) {
-        return Encryption.passPhraseDialog(this);
+        return Encryption.passPhraseDialog(this, this);
     }
 }

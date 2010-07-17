@@ -42,6 +42,10 @@ import org.bouncycastle2.jce.provider.BouncyCastleProvider;
 
 class Encryption
 {
+    public static interface PassPhraseCallbackInterface {
+        void passPhraseCallback();
+    }
+
     private static final String LT = "MobileOrg";
     static PGPPublicKeyRing publicKeyRing = null;
     static PGPSecretKeyRing secretKeyRing = null;
@@ -107,11 +111,9 @@ class Encryption
     public static void askForPassPhrase(Activity act)
     {
         act.showDialog(0);
-        //        Dialog pass = passPhraseDialog(act);
-        //        pass.show();
     }
 
-    public static Dialog passPhraseDialog(Activity context)
+    public static Dialog passPhraseDialog(Activity context, PassPhraseCallbackInterface cb)
     {
         AlertDialog.Builder alert = new AlertDialog.Builder(context);
 
@@ -124,11 +126,13 @@ class Encryption
         alert.setView(view);
 
         final Activity activity = context;
+        final PassPhraseCallbackInterface callback = cb;
         alert.setPositiveButton(android.R.string.ok,
                                 new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int id) {
-                                        Encryption.passPhrase = "" + input.getText();
+                                        Encryption.passPhrase = "" + input.getText();                                        
                                         activity.removeDialog(0);
+                                        callback.passPhraseCallback();
                                     }
                                 });
 
