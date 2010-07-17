@@ -45,7 +45,8 @@ class Encryption
     private static final String LT = "MobileOrg";
     static PGPPublicKeyRing publicKeyRing = null;
     static PGPSecretKeyRing secretKeyRing = null;
-    static String passPhrase = null;
+    public static String passPhrase = null;
+
 
     public static void importKeyRings(String filename)
             throws FileNotFoundException, PGPException, IOException 
@@ -114,12 +115,11 @@ class Encryption
     {
         AlertDialog.Builder alert = new AlertDialog.Builder(context);
 
+        alert.setMessage("Enter passphrase");
         LayoutInflater inflater =
             (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.pass_phrase, null);
         final EditText input = (EditText) view.findViewById(R.id.passPhrase);
-        final EditText inputNotUsed = (EditText) view.findViewById(R.id.passPhraseAgain);
-        inputNotUsed.setVisibility(View.GONE);
 
         alert.setView(view);
 
