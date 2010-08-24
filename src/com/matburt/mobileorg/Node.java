@@ -48,6 +48,7 @@ class Node {
     }
 
     void clearNodes() {
+        parsed = false;
         this.subNodes.clear();
     }
 }
