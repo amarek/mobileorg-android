@@ -26,22 +26,32 @@ import java.util.HashMap;
 import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import android.content.Context;
 
 public class Capture extends Activity implements OnClickListener
 {
     private EditText orgEditDisplay;
     private Button saveButton;
     private SharedPreferences appSettings;
+    private MobileOrgDatabase appdb;
     public static final String LT = "MobileOrg";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.appSettings = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+        this.appdb = new MobileOrgDatabase((Context)this);
         setContentView(R.layout.simpleedittext);
         this.saveButton = (Button)this.findViewById(R.id.captureSave);
         this.orgEditDisplay = (EditText)this.findViewById(R.id.orgEditTxt);
         this.saveButton.setOnClickListener(this);
+        this.populateDisplay();
+    }
+
+    @Override
+    public void onDestroy() {
+        this.appdb.close();
+        super.onDestroy();
     }
 
     public boolean onSave() {
@@ -88,7 +98,7 @@ public class Capture extends Activity implements OnClickListener
 
         try {
             writer.write(newNote);
-            this.addOrUpdateFile("mobileorg.org", "MobileOrg");
+            this.appdb.addOrUpdateFile("mobileorg.org", "MobileOrg");
             writer.flush();
             writer.close();
         }
@@ -133,22 +143,9 @@ public class Capture extends Activity implements OnClickListener
         return xformed + "\n\n";
     }
 
-    public void addOrUpdateFile(String filename, String name) {
-        SQLiteDatabase appdb = openOrCreateDatabase("MobileOrg",
-                                          0, null);
-        Cursor result = appdb.rawQuery("SELECT * FROM files " +
-                                       "WHERE file = '"+filename+"'", null);
-        if (result != null) {
-            if (result.getCount() > 0) {
-                appdb.execSQL("UPDATE files set name = '"+name+"', "+
-                              "checksum = '' where file = '"+filename+"'");
-            }
-            else {
-                appdb.execSQL("INSERT INTO files (file, name, checksum) " +
-                              "VALUES ('"+filename+"','"+name+"','')");
-            }
-        }
-        result.close();
-        appdb.close();
+    public void populateDisplay() {
+        Intent txtIntent = getIntent();
+        String srcText = txtIntent.getStringExtra("txtValue");
+        this.orgEditDisplay.setText(srcText);
     }
 }

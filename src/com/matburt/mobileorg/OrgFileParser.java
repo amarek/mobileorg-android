@@ -1,6 +1,5 @@
 package com.matburt.mobileorg;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Stack;
@@ -11,13 +10,12 @@ import java.io.FileInputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.DataInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import android.text.TextUtils;
 import android.util.Log;
-import android.app.Activity;
+import android.content.ContentValues;
+import android.database.sqlite.SQLiteDatabase;
 
 class OrgFileParser {
 	
@@ -27,19 +25,25 @@ class OrgFileParser {
 		ArrayList<String> tags = new ArrayList<String>();
 	}
 
-
+    ArrayList<String> orgPaths;
     ArrayList<Node> nodeList = new ArrayList<Node>();
     ArrayList<String> todoKeywords = new ArrayList<String>();
     String storageMode = null;
     Pattern titlePattern = null;
     FileInputStream fstream;
-    Node rootNode = new Node("MobileOrg", Node.NodeType.HEADING, false);
+    Node rootNode = new Node("MobileOrg", Node.HEADING);
+    MobileOrgDatabase appdb;
     public static final String LT = "MobileOrg";
 
-    OrgFileParser(String storageMode) {
+    OrgFileParser(ArrayList<String> orgpaths,
+                  String storageMode,
+                  MobileOrgDatabase appdb) {
+        this.appdb = appdb;
         this.storageMode = storageMode;
+        this.orgPaths = orgpaths;
         this.todoKeywords.add("TODO");
         this.todoKeywords.add("DONE");
+        
     }
     
     private Pattern prepareTitlePattern () {
@@ -91,115 +95,116 @@ class OrgFileParser {
         return newTitle;
     }
 
-    
-    public void parse(Node fileNode)
-    {
-        try
-        {
-            String thisLine;
-            int nodeDepth = 0;
-            Stack<Node> nodeStack = new Stack();
-            BufferedReader breader = this.getHandle(fileNode.nodeName, fileNode.encrypted);
-            nodeStack.push(fileNode);
-
-            while ((thisLine = breader.readLine()) != null) {
-                int numstars = 0;
-
-                if (thisLine.length() < 1 || thisLine.charAt(0) == '#') {
-                    continue;
-                }
-
-                for (int idx = 0; idx < thisLine.length(); idx++) {
-                    if (thisLine.charAt(idx) != '*') {
-                        break;
-                    }
-                    numstars++;
-                }
-
-                if (numstars >= thisLine.length() || thisLine.charAt(numstars) != ' ') {
-                    numstars = 0;
-                }
-
-                //headings
-                if (numstars > 0) {
-                    String title = thisLine.substring(numstars+1);
-                    TitleComponents titleComp = parseTitle(this.stripTitle(title));
-
-                    Node newNode = new Node(titleComp.title, Node.NodeType.HEADING, false);
-                    newNode.todo = titleComp.todo;
-                    newNode.tags.addAll(titleComp.tags);
-                    if (numstars > nodeDepth) {
-                        try {
-                            Node lastNode = nodeStack.peek();
-                            lastNode.addChildNode(newNode);
-                        } catch (EmptyStackException e) {
-                        }
-                        nodeStack.push(newNode);
-                        nodeDepth++;
-                    }
-                    else if (numstars == nodeDepth) {
-                        nodeStack.pop();
-                        nodeStack.peek().addChildNode(newNode);
-                        nodeStack.push(newNode);
-                    }
-                    else if (numstars < nodeDepth) {
-                        for (;numstars <= nodeDepth; nodeDepth--) {
-                            nodeStack.pop();
-                        }
-
-                        Node lastNode = nodeStack.peek();
-                        lastNode.addChildNode(newNode);
-                        nodeStack.push(newNode);
-                        nodeDepth++;
-                    }
-                }
-                //content
-                else {
-                    Node lastNode = nodeStack.peek();
-                    lastNode.addPayload(thisLine);
-                }
-            }
-            for (;nodeDepth > 0; nodeDepth--) {
-                nodeStack.pop();
-            }
-            breader.close();
-            fileNode.parsed = true;        
-        }
-        catch (IOException e) {
-            Log.e(LT, "IO Exception on readerline: " + e.getMessage());
-        }
+    public long createEntry(String heading, int nodeType,
+                            String content, long parentId) {
+        ContentValues recValues = new ContentValues(); 
+        recValues.put("heading", heading);
+        recValues.put("type", nodeType);
+        recValues.put("content", content);
+        recValues.put("parentid", parentId);
+        return this.appdb.appdb.insert("data", null, recValues);
     }
 
-    public void parse(ArrayList<String> orgPaths) {
+    public void addContent(long nodeId, String content) {
+        ContentValues recValues = new ContentValues();
+        recValues.put("content", content + "\n");
+        this.appdb.appdb.update("data", recValues, "id = ?", new String[] {Long.toString(nodeId)});
+    }
+
+    public void parse() {
+        String thisLine;
         Stack<Node> nodeStack = new Stack();
         nodeStack.push(this.rootNode);
+        int nodeDepth = 0;
 
-        for (int jdx = 0; jdx < orgPaths.size(); jdx++) {
-            Log.d(LT, "Parsing: " + orgPaths.get(jdx));
-            //if file is encrypted just add a placeholder node to be parsed later
-            if(orgPaths.get(jdx).endsWith(".gpg"))
-            {
-                nodeStack.peek().addChildNode(new Node(orgPaths.get(jdx),
-                                                       Node.NodeType.HEADING,
-                                                       true));
-                continue;
+        for (int jdx = 0; jdx < this.orgPaths.size(); jdx++) {
+            try {
+                Log.d(LT, "Parsing: " + orgPaths.get(jdx));
+                BufferedReader breader = this.getHandle(this.orgPaths.get(jdx));
+                Node fileNode = new Node(this.orgPaths.get(jdx),
+                                         Node.HEADING);
+                nodeStack.peek().addChildNode(fileNode);
+                nodeStack.push(fileNode);
+                while ((thisLine = breader.readLine()) != null) {
+                    int numstars = 0;
+
+                    if (thisLine.length() < 1 || thisLine.charAt(0) == '#') {
+                        continue;
+                    }
+
+                    for (int idx = 0; idx < thisLine.length(); idx++) {
+                        if (thisLine.charAt(idx) != '*') {
+                            break;
+                        }
+                        numstars++;
+                    }
+
+                    if (numstars >= thisLine.length() || thisLine.charAt(numstars) != ' ') {
+                        numstars = 0;
+                    }
+
+                    //headings
+                    if (numstars > 0) {
+                        String title = thisLine.substring(numstars+1);
+                        TitleComponents titleComp = parseTitle(this.stripTitle(title));
+                        Node newNode = new Node(titleComp.title,
+                                                Node.HEADING);
+                        newNode.setFullTitle(this.stripTitle(title));
+                        newNode.todo = titleComp.todo;
+                        newNode.tags.addAll(titleComp.tags);
+                        if (numstars > nodeDepth) {
+                            try {
+                                Node lastNode = nodeStack.peek();
+                                lastNode.addChildNode(newNode);
+                            } catch (EmptyStackException e) {
+                            }
+                            nodeStack.push(newNode);
+                            nodeDepth++;
+                        }
+                        else if (numstars == nodeDepth) {
+                            nodeStack.pop();
+                            nodeStack.peek().addChildNode(newNode);
+                            nodeStack.push(newNode);
+                        }
+                        else if (numstars < nodeDepth) {
+                            for (;numstars <= nodeDepth; nodeDepth--) {
+                                nodeStack.pop();
+                            }
+
+                            Node lastNode = nodeStack.peek();
+                            lastNode.addChildNode(newNode);
+                            nodeStack.push(newNode);
+                            nodeDepth++;
+                        }
+                    }
+                    //content
+                    else {
+                        Node lastNode = nodeStack.peek();
+                        if (thisLine.indexOf(":ID:") != -1) {
+                            String trimmedLine = thisLine.substring(thisLine.indexOf(":ID:")+4).trim();
+                            lastNode.addProperty("ID", trimmedLine);
+                        }
+                        lastNode.addPayload(thisLine);
+                    }
+                }
+                for (;nodeDepth > 0; nodeDepth--) {
+                    nodeStack.pop();
+                }
+                nodeStack.pop();
+                breader.close();
             }
-
-            Node fileNode = new Node(orgPaths.get(jdx),
-                                     Node.NodeType.HEADING,
-                                     false);
-            nodeStack.peek().addChildNode(fileNode);
-            nodeStack.push(fileNode);
-            parse(fileNode);
-            nodeStack.pop();                
+            catch (IOException e) {
+                Log.e(LT, "IO Exception on readerline: " + e.getMessage());
+            }
         }
     }
 
-    public BufferedReader getHandle(String filename, boolean encrypted) {
+    public BufferedReader getHandle(String filename) {
         BufferedReader breader = null;
         try {
             if (this.storageMode == null || this.storageMode.equals("internal")) {
-                this.fstream = new FileInputStream("/data/data/com.matburt.mobileorg/files/" + filename);
+                String normalized = filename.replace("/", "_");
+                this.fstream = new FileInputStream("/data/data/com.matburt.mobileorg/files/" + normalized);
             }
             else if (this.storageMode.equals("sdcard")) {
                 this.fstream = new FileInputStream("/sdcard/mobileorg/" + filename);
@@ -208,17 +213,8 @@ class OrgFileParser {
                 Log.e(LT, "[Parse] Unknown storage mechanism: " + this.storageMode);
                 this.fstream = null;
             }
-            if(!encrypted)
-            {
-                DataInputStream in = new DataInputStream(this.fstream);
-                breader = new BufferedReader(new InputStreamReader(in));
-            }
-            else
-            {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                Encryption.decrypt(this.fstream, out, Encryption.passPhrase, false);
-                breader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(out.toByteArray())));
-            }
+            DataInputStream in = new DataInputStream(this.fstream);
+            breader = new BufferedReader(new InputStreamReader(in));
         }
         catch (Exception e) {
             Log.e(LT, "Error: " + e.getMessage() + " in file " + filename);

@@ -1,6 +1,7 @@
 package com.matburt.mobileorg;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -8,25 +9,30 @@ import java.util.regex.Matcher;
 
 class Node {
 
-    public enum NodeType {
-        HEADER, HEADING, COMMENT, DATA
-    }
+    static int HEADER = 0;
+    static int HEADING = 1;
+    static int COMMENT = 2;
+    static int DATA = 3;
 
     ArrayList<Node> subNodes = new ArrayList<Node>();
     ArrayList<String> tags = new ArrayList<String>();
+    HashMap<String, String> properties = new HashMap<String, String>();
+
     String nodeName = "";
     String todo = "";
-    NodeType nodeType;
+    int nodeType;
     String nodePayload = "";
+    String nodeTitle = "";
     Date schedule = null;
     Date deadline = null;
-    boolean encrypted = false;
-    boolean parsed = false;
 
-    Node(String heading, NodeType ntype, boolean encrypted) {
-        nodeName = heading;
-        nodeType = ntype;
-        this.encrypted = encrypted;
+    Node(String heading, int ntype) {
+        this.nodeName = heading;
+        this.nodeType = ntype;
+    }
+
+    void setFullTitle(String title) {
+        this.nodeTitle = title;
     }
 
     Node findChildNode(String regex) {
@@ -48,7 +54,10 @@ class Node {
     }
 
     void clearNodes() {
-        parsed = false;
         this.subNodes.clear();
+    }
+
+    void addProperty(String key, String val) {
+        this.properties.put(key, val);
     }
 }
