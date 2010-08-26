@@ -251,7 +251,7 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runSynchronizer() {
-        final Synchronizer appSync = new WebDAVSynchronizer(this);
+        final Synchronizer appSync = new SVNSynchronizer(this, appSettings.getString("webUrl",""), MobileOrgApplication.getStorageFolder());
         Thread syncThread = new Thread() {
                 public void run() {
                 	try {
@@ -311,4 +311,5 @@ public class MobileOrgActivity extends ListActivity
     public String getStorageLocation() {
         return this.appSettings.getString("storageMode", "");
     }
+
 }

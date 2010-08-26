@@ -1,6 +1,7 @@
 package com.matburt.mobileorg;
 
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.os.Environment;
 import android.database.Cursor;
@@ -58,7 +59,6 @@ public class SVNSynchronizer implements Synchronizer
 {
     private Map<String, String> appSettings;
     private Activity activity;
-
     private static SVNClientManager ourClientManager;
     private static final String LT = "MobileOrg";
     private String storageDir;
@@ -78,7 +78,10 @@ public class SVNSynchronizer implements Synchronizer
         SVNDebugLog.setDefaultLog(customLogger);
     }
 
-    public boolean pull()
+    public void close()
+    {}
+
+    public void pull()
     {
         Log.i(LT,"pull from " + webUrl);
         SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
@@ -90,7 +93,7 @@ public class SVNSynchronizer implements Synchronizer
         } 
         catch (SVNException e) {
             Log.e(LT, "Exception: " + e);
-            return false;
+            return;
         }
 
         try {
@@ -101,16 +104,14 @@ public class SVNSynchronizer implements Synchronizer
         }
         catch(SVNException e) {
             Log.e(LT, "SVNException: " + e + ":" + e.getMessage());
-            return false;
+            return;
         }
         addOrUpdateFiles(morgDir);
-        return true;
     }
 
     protected void addOrUpdateFiles(File folder) {
         File[] files = folder.listFiles();
-        SQLiteDatabase appdb = this.activity.openOrCreateDatabase("MobileOrg",
-                                                                  0, null);
+        MobileOrgDatabase appdb = new MobileOrgDatabase((Context)activity);
         for(File file : files)
         {
             if(!file.getName().endsWith(".org") &&
@@ -118,26 +119,13 @@ public class SVNSynchronizer implements Synchronizer
             {
                 continue;
             }
-            String name = file.getName();
-            String filename = file.getName();
-            Cursor result = appdb.rawQuery("SELECT * FROM files " +
-                                           "WHERE file = '"+filename+"'", null);
-            if (result != null) {
-                if (result.getCount() > 0) {
-                    appdb.execSQL("UPDATE files set name = '"+name+"', "+
-                                  "checksum = '' where file = '"+filename+"'");
-                }
-                else {
-                    appdb.execSQL("INSERT INTO files (file, name, checksum) " +
-                                  "VALUES ('"+filename+"','"+name+"','')");
-                }
-            }
-            result.close();
+            
+            appdb.addOrUpdateFile(file.getName(), file.getName());
         }
         appdb.close();
     }
 
-    public boolean push()
+    public void push()
     {
 
         Log.i(LT,"Commiting repository at " + storageDir);
@@ -145,7 +133,7 @@ public class SVNSynchronizer implements Synchronizer
             File file = new File(storageDir + "mobileorg.org");
             if(!file.exists())
             {
-                return true;
+                return;
             }
             ourClientManager.getWCClient().doAdd(file, false, false, false, true);
             long rev = ourClientManager.getCommitClient().doCommit(new File[] { file }, false,
@@ -155,6 +143,5 @@ public class SVNSynchronizer implements Synchronizer
         catch(SVNException e) {
             Log.e(LT, "SVNException: " + e + ":" + e.getMessage());
         }
-        return true;
     }
 }
