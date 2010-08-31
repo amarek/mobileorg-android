@@ -213,7 +213,7 @@ public class SVNSocketFactory {
 
 		final TrustManager[] trustManagers = new TrustManager[] {trustManager};
 		try {
-			final SSLContext context = SSLContext.getInstance("SSLv3");
+			final SSLContext context = SSLContext.getInstance("TLS");
 			context.init(keyManagers, trustManagers, null);
 			return context;
 		}

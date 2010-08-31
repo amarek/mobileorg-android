@@ -139,7 +139,7 @@ public final class HTTPSSLKeyManager implements X509KeyManager {
 
         if (keyStore != null) {
             try {
-                kmf = KeyManagerFactory.getInstance("SunX509");
+                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 if (kmf != null) {
                     kmf.init(keyStore, passphrase);
                     result = kmf.getKeyManagers();
