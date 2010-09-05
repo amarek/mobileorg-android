@@ -26,12 +26,14 @@ import android.text.TextUtils;
 import android.util.Log;
 import java.util.ArrayList;
 import java.lang.Runnable;
+import java.lang.reflect.InvocationTargetException;
 import java.io.BufferedReader;
 import java.io.StringReader;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
 
 public class MobileOrgActivity extends ListActivity
 {
@@ -284,7 +286,7 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runSynchronizer() {
-        final Synchronizer appSync = new WebDAVSynchronizer(this);
+        final Synchronizer appSync = getSynchronizer();
         Thread syncThread = new Thread() {
                 public void run() {
                 	try {
@@ -345,4 +347,40 @@ public class MobileOrgActivity extends ListActivity
         return this.appSettings.getString("storageMode", "");
     }
 
+    protected Synchronizer getSynchronizer()
+    {
+        try {
+            Context context = ((Context)this).createPackageContext("org.amarek.mobileorg.svn", CONTEXT_INCLUDE_CODE);
+            Class<?> c = context.getClassLoader().loadClass("org.amarek.mobileorg.svn.SVNSynchronizer");
+            Object inst = (Object)(c.getConstructor(new Class[] {Activity.class, String.class, String.class}).
+                newInstance( new Object[] {this,
+                                           appSettings.getString("webUrl",""), 
+                                           MobileOrgApplication.getStorageFolder()}));
+
+            //class/interface identity doesn't work across peer ClassLoaders so
+            //we can't use the synchronizer instance via the Synchronizer
+            //interface - need to resort to reflection instead.
+            return new SynchronizerProxy(inst);
+        }
+        catch(ClassNotFoundException ex){
+            Log.e("MobileOrg", "Exception:"+ex);
+        }
+        catch(NoSuchMethodException ex){
+            Log.e("MobileOrg", "Exception:"+ex);
+        }
+        catch(InstantiationException ex){
+            Log.e("MobileOrg", "Exception:"+ex);
+        }
+        catch(NameNotFoundException ex){
+            Log.e("MobileOrg", "Exception:"+ex);
+        }
+        catch(IllegalAccessException ex){
+            Log.e("MobileOrg", "Exception:"+ex);
+        }
+        catch(InvocationTargetException ex)
+        {
+        }
+
+        return null;
+    }
 }
