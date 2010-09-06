@@ -305,7 +305,7 @@ public class MobileOrgActivity extends ListActivity
         };
         syncThread.start();
 	
-	syncDialog = ProgressDialog.show(this, "",getString(R.string.sync_wait), true);
+        syncDialog = ProgressDialog.show(this, "",getString(R.string.sync_wait), true);
     }
 
     public boolean runCapture() {
