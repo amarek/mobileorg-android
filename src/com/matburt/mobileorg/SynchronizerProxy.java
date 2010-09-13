@@ -19,7 +19,7 @@ public class SynchronizerProxy implements Synchronizer
     public void pull() throws NotFoundException, ReportableError
     {
         try {
-            push.invoke(inst, new Object[0]);
+            pull.invoke(inst, new Object[0]);
         }
         catch(IllegalAccessException ex)
         {
