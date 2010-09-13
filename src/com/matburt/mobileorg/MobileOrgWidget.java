@@ -61,20 +61,10 @@ public class MobileOrgWidget extends AppWidgetProvider {
             updateViews = new RemoteViews(context.getPackageName(),
                                           R.layout.widget_mobileorg);
             ArrayList<String> allOrgList = this.appdb.getOrgFiles();
-            String storageMode = this.getStorageLocation(context);
-            String userSynchro = appPrefs.getString("syncSource","");
-            String orgBasePath = "";
-            if (userSynchro.equals("sdcard")) {
-                String indexFile = appPrefs.getString("indexFilePath","");
-                File fIndexFile = new File(indexFile);
-                orgBasePath = fIndexFile.getParent() + "/";
-            }
-            else {
-                orgBasePath = "/sdcard/mobileorg/";
-            }
-
+            String storageMode = appPrefs.getString("storageMode", "");
+            
             OrgFileParser ofp = new OrgFileParser(allOrgList, storageMode,
-                                                  this.appdb, orgBasePath);
+                                                  this.appdb, MobileOrgApplication.getOrgBasePath(appPrefs));
             ofp.parse();
             Node agendaNode = ofp.rootNode.findChildNode("agendas.org");
             Node todoNode = agendaNode.findChildNode("ToDo: ALL");
@@ -84,11 +74,6 @@ public class MobileOrgWidget extends AppWidgetProvider {
             }
             updateViews.setTextViewText(R.id.message, widgetBuffer);
             return updateViews;
-        }
-
-        public String getStorageLocation(Context context) {
-            SharedPreferences appPrefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
-            return appPrefs.getString("storageMode", "");
         }
 
         @Override

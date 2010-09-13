@@ -8,6 +8,7 @@ import android.util.Log;
 import android.os.Environment;
 import android.content.Intent;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageItemInfo;
 import android.content.pm.ResolveInfo;
 
@@ -54,5 +55,20 @@ public class MobileOrgApplication extends Application {
             Log.d("MobileOrg","Found synchronizer plugin: "+info.activityInfo.packageName);            
         }
         return out;
+    }
+
+    static String getOrgBasePath(SharedPreferences appPrefs)
+    {
+        String userSynchro = appPrefs.getString("syncSource","");
+        String orgBasePath = "";
+        if (userSynchro.equals("sdcard")) {
+            String indexFile = appPrefs.getString("indexFilePath","");
+            File fIndexFile = new File(indexFile);
+            orgBasePath = fIndexFile.getParent() + "/";
+        }
+        else {
+            orgBasePath = appPrefs.getString("storageDir","");
+        }
+        return orgBasePath;
     }
 }

@@ -65,7 +65,12 @@ public class MobileOrgActivity extends ListActivity
         }
 
         public int getCount() {
-            return this.thisNode.subNodes.size();
+            if(thisNode != null) {
+                return this.thisNode.subNodes.size();
+            }
+            else {
+                return 0;
+            }
         }
 
         public Object getItem(int position) {
@@ -155,23 +160,11 @@ public class MobileOrgActivity extends ListActivity
     public void runParser() {
         MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
         ArrayList<String> allOrgList = this.appdb.getOrgFiles();
-        String storageMode = this.getStorageLocation();
-        String userSynchro = this.appSettings.getString("syncSource","");
-        String orgBasePath = "";
-
-        if (userSynchro.equals("sdcard")) {
-            String indexFile = this.appSettings.getString("indexFilePath","");
-            File fIndexFile = new File(indexFile);
-            orgBasePath = fIndexFile.getParent() + "/";
-        }
-        else {
-            orgBasePath = this.appSettings.getString("storageDir","");
-        }
 
         OrgFileParser ofp = new OrgFileParser(allOrgList,
-                                              storageMode,
+                                              getStorageLocation(),
                                               this.appdb,
-                                              orgBasePath);
+                                              MobileOrgApplication.getOrgBasePath(appSettings));
         try {
         	ofp.parse();
         	appInst.rootNode = ofp.rootNode;
@@ -230,18 +223,7 @@ public class MobileOrgActivity extends ListActivity
             if(Encryption.isAvailable((Context)this))
             {
                 //retrieve the encrypted file data
-                String userSynchro = this.appSettings.getString("syncSource","");
-                String orgBasePath = "";
-                if (userSynchro.equals("sdcard")) {
-                    String indexFile = this.appSettings.getString("indexFilePath","");
-                    File fIndexFile = new File(indexFile);
-                    orgBasePath = fIndexFile.getParent() + "/";
-                }
-                else {
-                    orgBasePath = this.appSettings.getString("storageDir","");
-                }
-
-                byte[] rawData = OrgFileParser.getRawFileData(orgBasePath, thisNode.nodeName);
+                byte[] rawData = OrgFileParser.getRawFileData(MobileOrgApplication.getOrgBasePath(appSettings), thisNode.nodeName);
                 //and send it to APG for decryption
                 Encryption.decrypt(this, rawData);
             }
@@ -292,21 +274,11 @@ public class MobileOrgActivity extends ListActivity
             }
             
             Node thisNode = appInst.getSelectedNode();
-            String userSynchro = this.appSettings.getString("syncSource","");
-            String orgBasePath = "";
-            if (userSynchro.equals("sdcard")) {
-                String indexFile = this.appSettings.getString("indexFilePath","");
-                File fIndexFile = new File(indexFile);
-                orgBasePath = fIndexFile.getParent() + "/";
-            }
-            else {
-                orgBasePath = this.appSettings.getString("storageDir","");
-            }
             String decryptedData = data.getStringExtra(Encryption.EXTRA_DECRYPTED_MESSAGE);
             OrgFileParser ofp = new OrgFileParser(appdb.getOrgFiles(),
                                                   getStorageLocation(),
                                                   appdb,
-                                                  orgBasePath);
+                                                  MobileOrgApplication.getOrgBasePath(appSettings));
 
             ofp.parse(thisNode, new BufferedReader(new StringReader(decryptedData)));
             expandSelection(appInst.nodeSelection);
