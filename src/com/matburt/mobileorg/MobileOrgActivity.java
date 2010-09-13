@@ -29,6 +29,7 @@ import java.lang.Runnable;
 import java.lang.reflect.InvocationTargetException;
 import java.io.BufferedReader;
 import java.io.StringReader;
+import java.io.File;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
@@ -136,7 +137,10 @@ public class MobileOrgActivity extends ListActivity
                     return true;
                 }
             });
-        if (this.appSettings.getString("webUrl","").equals("")) {
+        if ((this.appSettings.getString("syncSource","").equals("webdav") &&
+             this.appSettings.getString("webUrl","").equals("")) ||
+            (this.appSettings.getString("syncSource","").equals("sdcard") &&
+             this.appSettings.getString("indexFilePath","").equals(""))) {
             this.onShowSettings();
         }
     }
@@ -151,9 +155,22 @@ public class MobileOrgActivity extends ListActivity
         MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
         ArrayList<String> allOrgList = this.appdb.getOrgFiles();
         String storageMode = this.getStorageLocation();
+        String userSynchro = this.appSettings.getString("syncSource","");
+        String orgBasePath = "";
+
+        if (userSynchro.equals("sdcard")) {
+            String indexFile = this.appSettings.getString("indexFilePath","");
+            File fIndexFile = new File(indexFile);
+            orgBasePath = fIndexFile.getParent() + "/";
+        }
+        else {
+            orgBasePath = "/sdcard/mobileorg/";
+        }
+
         OrgFileParser ofp = new OrgFileParser(allOrgList,
                                               storageMode,
-                                              this.appdb);
+                                              this.appdb,
+                                              orgBasePath);
         try {
         	ofp.parse();
         	appInst.rootNode = ofp.rootNode;
@@ -212,7 +229,18 @@ public class MobileOrgActivity extends ListActivity
             if(Encryption.isAvailable((Context)this))
             {
                 //retrieve the encrypted file data
-                byte[] rawData = OrgFileParser.getRawFileData(thisNode.nodeName);
+                String userSynchro = this.appSettings.getString("syncSource","");
+                String orgBasePath = "";
+                if (userSynchro.equals("sdcard")) {
+                    String indexFile = this.appSettings.getString("indexFilePath","");
+                    File fIndexFile = new File(indexFile);
+                    orgBasePath = fIndexFile.getParent() + "/";
+                }
+                else {
+                    orgBasePath = "/sdcard/mobileorg/";
+                }
+
+                byte[] rawData = OrgFileParser.getRawFileData(orgBasePath, thisNode.nodeName);
                 //and send it to APG for decryption
                 Encryption.decrypt(this, rawData);
             }
@@ -263,11 +291,21 @@ public class MobileOrgActivity extends ListActivity
             }
             
             Node thisNode = appInst.getSelectedNode();
-
+            String userSynchro = this.appSettings.getString("syncSource","");
+            String orgBasePath = "";
+            if (userSynchro.equals("sdcard")) {
+                String indexFile = this.appSettings.getString("indexFilePath","");
+                File fIndexFile = new File(indexFile);
+                orgBasePath = fIndexFile.getParent() + "/";
+            }
+            else {
+                orgBasePath = "/sdcard/mobileorg/";
+            }
             String decryptedData = data.getStringExtra(Encryption.EXTRA_DECRYPTED_MESSAGE);
             OrgFileParser ofp = new OrgFileParser(appdb.getOrgFiles(),
                                                   getStorageLocation(),
-                                                  appdb);
+                                                  appdb,
+                                                  orgBasePath);
 
             ofp.parse(thisNode, new BufferedReader(new StringReader(decryptedData)));
             expandSelection(appInst.nodeSelection);
@@ -286,7 +324,19 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runSynchronizer() {
-        final Synchronizer appSync = getSynchronizer();
+        String userSynchro = this.appSettings.getString("syncSource","");
+        final Synchronizer appSync;
+        if (userSynchro.equals("webdav")) {
+            appSync = new WebDAVSynchronizer(this);
+        }
+        else if (userSynchro.equals("sdcard")) {
+            appSync = new SDCardSynchronizer(this);
+        }
+        else {
+            this.onShowSettings();
+            return;
+        }
+
         Thread syncThread = new Thread() {
                 public void run() {
                 	try {
@@ -304,7 +354,6 @@ public class MobileOrgActivity extends ListActivity
             }
         };
         syncThread.start();
-	
         syncDialog = ProgressDialog.show(this, "",getString(R.string.sync_wait), true);
     }
 

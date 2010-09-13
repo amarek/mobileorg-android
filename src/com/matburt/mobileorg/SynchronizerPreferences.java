@@ -50,7 +50,7 @@ public class SynchronizerPreferences extends Preference {
                             30,
                             LinearLayout.LayoutParams.WRAP_CONTENT);
         params3.gravity = Gravity.CENTER;
-        layout.setPadding(15, 5, 10, 5);
+        layout.setPadding(15, 10, 10, 10);
         layout.setOrientation(LinearLayout.HORIZONTAL);
         TextView view = new TextView(getContext());
         view.setText("Configure Synchronizer Settings...");
@@ -59,6 +59,8 @@ public class SynchronizerPreferences extends Preference {
         view.setGravity(Gravity.LEFT);
         view.setLayoutParams(params1);
 
+        //NOTE: Need a way to dynamically pick a preferences activity based on the
+        //synchro mode selected, replace with a plugin architecture
         this.setOnPreferenceClickListener(new OnPreferenceClickListener() {
                 public boolean onPreferenceClick(Preference arg0) {
                     SharedPreferences appSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
@@ -69,7 +71,8 @@ public class SynchronizerPreferences extends Preference {
                         getContext().startActivity(syncIntents.get(synchroMode));
                     }
                     else {
-                        //throw an error
+                        //throw new ReportableError(R.string.error_synchronizer_type_unknown,
+                        //                          synchroMode);
                     }
                     return true;
                 }
