@@ -40,13 +40,6 @@ public class MobileOrgApplication extends Application {
         return thisNode;
     }
 
-    static String getStorageFolder()
-    {
-        File root = Environment.getExternalStorageDirectory();   
-        File morgDir = new File(root, "mobileorg");
-        return morgDir.getAbsolutePath() + "/";
-    }
-
     static List<PackageItemInfo> discoverSynchronizerPlugins(Context context)
     {
         Intent discoverSynchro = new Intent(SYNCHRONIZER_PLUGIN_ACTION);

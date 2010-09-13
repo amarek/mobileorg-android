@@ -21,6 +21,12 @@
         android:entries="@array/storageModes"
         android:entryValues="@array/storageModesVals"
         android:defaultValue="internal" />
+    <EditTextPreference
+        android:name="Storage Dir"
+        android:summary="Full path to the storage dir on SD card"
+        android:title="Storage Dir"
+        android:defaultValue="/sdcard/mobileorg/"
+        android:key="storageDir" />
   </PreferenceCategory>
   <PreferenceCategory android:title="Other">
     <PreferenceScreen

@@ -18,6 +18,7 @@ import android.widget.ListView;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView;
+import android.widget.Toast;
 import android.content.Intent;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -164,7 +165,7 @@ public class MobileOrgActivity extends ListActivity
             orgBasePath = fIndexFile.getParent() + "/";
         }
         else {
-            orgBasePath = "/sdcard/mobileorg/";
+            orgBasePath = this.appSettings.getString("storageDir","");
         }
 
         OrgFileParser ofp = new OrgFileParser(allOrgList,
@@ -237,7 +238,7 @@ public class MobileOrgActivity extends ListActivity
                     orgBasePath = fIndexFile.getParent() + "/";
                 }
                 else {
-                    orgBasePath = "/sdcard/mobileorg/";
+                    orgBasePath = this.appSettings.getString("storageDir","");
                 }
 
                 byte[] rawData = OrgFileParser.getRawFileData(orgBasePath, thisNode.nodeName);
@@ -299,7 +300,7 @@ public class MobileOrgActivity extends ListActivity
                 orgBasePath = fIndexFile.getParent() + "/";
             }
             else {
-                orgBasePath = "/sdcard/mobileorg/";
+                orgBasePath = this.appSettings.getString("storageDir","");
             }
             String decryptedData = data.getStringExtra(Encryption.EXTRA_DECRYPTED_MESSAGE);
             OrgFileParser ofp = new OrgFileParser(appdb.getOrgFiles(),
@@ -324,16 +325,9 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runSynchronizer() {
-        String userSynchro = this.appSettings.getString("syncSource","");
-        final Synchronizer appSync;
-        if (userSynchro.equals("webdav")) {
-            appSync = new WebDAVSynchronizer(this);
-        }
-        else if (userSynchro.equals("sdcard")) {
-            appSync = new SDCardSynchronizer(this);
-        }
-        else {
-            this.onShowSettings();
+
+        final Synchronizer appSync = getSynchronizer();
+        if(appSync == null) {
             return;
         }
 
@@ -398,13 +392,35 @@ public class MobileOrgActivity extends ListActivity
 
     protected Synchronizer getSynchronizer()
     {
+        String userSynchro = this.appSettings.getString("syncSource","");
+        if (userSynchro == null || userSynchro.length() == 0){
+            this.onShowSettings();
+            return null;
+        }
+        else if (userSynchro.equals("webdav")) {
+            return new WebDAVSynchronizer(this);
+        }
+        else if (userSynchro.equals("sdcard")) {
+            return new SDCardSynchronizer(this);
+        }
+        else {
+            final Synchronizer sync = getSynchPluginInstance(userSynchro);
+            if(sync == null) {
+                Toast.makeText(this,
+                               R.string.error_synchronizer_plugin_failed, 
+                               Toast.LENGTH_LONG).show();
+            }
+            return sync;
+
+        }
+    }
+
+    protected Synchronizer getSynchPluginInstance(String packageName)
+    {
         try {
-            Context context = ((Context)this).createPackageContext("org.amarek.mobileorg.svn", CONTEXT_INCLUDE_CODE);
-            Class<?> c = context.getClassLoader().loadClass("org.amarek.mobileorg.svn.SVNSynchronizer");
-            Object inst = (Object)(c.getConstructor(new Class[] {Activity.class, String.class, String.class}).
-                newInstance( new Object[] {this,
-                                           appSettings.getString("webUrl",""), 
-                                           MobileOrgApplication.getStorageFolder()}));
+            Context context = ((Context)this).createPackageContext(packageName, CONTEXT_INCLUDE_CODE);
+            Class<?> c = context.getClassLoader().loadClass(packageName + ".Synchronizer");
+            Object inst = (Object)(c.getConstructor(new Class[] {Activity.class}).newInstance( new Object[] {this}));
 
             //class/interface identity doesn't work across peer ClassLoaders so
             //we can't use the synchronizer instance via the Synchronizer
