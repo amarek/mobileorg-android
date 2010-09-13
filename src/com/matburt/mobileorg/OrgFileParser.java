@@ -114,7 +114,7 @@ class OrgFileParser {
         this.appdb.appdb.update("data", recValues, "id = ?", new String[] {Long.toString(nodeId)});
     }
 
-    public void parse(Node fileNode, BufferedReader breader)
+    public boolean parse(Node fileNode, BufferedReader breader)
     {
         try
         {
@@ -123,6 +123,9 @@ class OrgFileParser {
             if(breader == null)
             {
                 breader = this.getHandle(fileNode.nodeName);
+                if(breader == null) {
+                    return false;
+                }
             }
             nodeStack.push(fileNode);
             int nodeDepth = 0;
@@ -194,23 +197,21 @@ class OrgFileParser {
             }
             fileNode.parsed = true;        
             breader.close();
+            return true;
         }
         catch (IOException e) {
             Log.e(LT, "IO Exception on readerline: " + e.getMessage());
+            return false;
         }
-
     }
 
     public void parse() {
-        Stack<Node> nodeStack = new Stack();
-        nodeStack.push(this.rootNode);
-
         for (int jdx = 0; jdx < this.orgPaths.size(); jdx++) {
             Log.d(LT, "Parsing: " + orgPaths.get(jdx));
             //if file is encrypted just add a placeholder node to be parsed later
             if(!orgPaths.get(jdx).endsWith(".org"))
             {
-                nodeStack.peek().addChildNode(new Node(orgPaths.get(jdx),
+                this.rootNode.addChildNode(new Node(orgPaths.get(jdx),
                                                        Node.HEADING,
                                                        true));
                 continue;
@@ -219,10 +220,9 @@ class OrgFileParser {
             Node fileNode = new Node(this.orgPaths.get(jdx),
                                      Node.HEADING,
                                      false);
-            nodeStack.peek().addChildNode(fileNode);
-            nodeStack.push(fileNode);
-            parse(fileNode, null);
-            nodeStack.pop();
+            if(parse(fileNode, null)) {
+                this.rootNode.addChildNode(fileNode);
+            }            
         }
     }
 
