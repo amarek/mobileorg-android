@@ -115,6 +115,9 @@ public class MobileOrgActivity extends ListActivity
     private static final int OP_MENU_SYNC = 2;
     private static final int OP_MENU_OUTLINE = 3;
     private static final int OP_MENU_CAPTURE = 4;
+    private static final int ACTIVITY_EXPAND = 1;
+    private static final int ACTIVITY_CAPTURE = 3;
+    private static final int ACTIVITY_SYNCHRONIZE = 4;
     private static final String LT = "MobileOrg";
     private ProgressDialog syncDialog;
     private MobileOrgDatabase appdb;
@@ -256,13 +259,13 @@ public class MobileOrgActivity extends ListActivity
         dispIntent.setClassName("com.matburt.mobileorg",
                                 "com.matburt.mobileorg.MobileOrgActivity");
         dispIntent.putIntegerArrayListExtra("nodePath", selection);
-        startActivityForResult(dispIntent, 1);        
+        startActivityForResult(dispIntent, ACTIVITY_EXPAND);        
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         MobileOrgApplication appInst = (MobileOrgApplication)this.getApplication();
-        if (requestCode == 3) {
+        if (requestCode == ACTIVITY_CAPTURE) {
             this.runParser();
         }
         else if(requestCode == Encryption.DECRYPT_MESSAGE)
@@ -283,7 +286,22 @@ public class MobileOrgActivity extends ListActivity
             ofp.parse(thisNode, new BufferedReader(new StringReader(decryptedData)));
             expandSelection(appInst.nodeSelection);
         }
-        else {
+        else if(requestCode == ACTIVITY_SYNCHRONIZE)
+        {
+            if(resultCode == Activity.RESULT_OK)
+            {
+                Log.i("MobileOrg","Synchronization completed successfully");
+                addOrUpdateFiles();
+                runParser();
+                onResume();
+            }
+            else
+            {
+                ErrorReporter.displayError(this, data.getStringExtra("error"));
+            }
+        }
+        else
+        {
             appInst.popSelection();
         }
     }
@@ -297,37 +315,20 @@ public class MobileOrgActivity extends ListActivity
     }
 
     public void runSynchronizer() {
+        String userSynchro = this.appSettings.getString("syncSource","");
 
-        final Synchronizer appSync = getSynchronizer();
-        if(appSync == null) {
-            return;
-        }
-
-        Thread syncThread = new Thread() {
-                public void run() {
-                	try {
-                		syncError = null;
-	                    appSync.pull();
-	                    appSync.push();
-                	}
-                	catch(ReportableError e) {
-                		syncError = e;
-                	}
-                    finally {
-                        appSync.close();
-                    }
-                    syncHandler.post(syncUpdateResults);
-            }
-        };
-        syncThread.start();
-        syncDialog = ProgressDialog.show(this, "",getString(R.string.sync_wait), true);
+        Intent syncIntent = new Intent(MobileOrgApplication.SYNCHRONIZER_PLUGIN_ACTION_SYNC);
+        String[] params = userSynchro.split(":");
+        syncIntent.setClassName(params[0], params[1]);
+        syncIntent.putExtra("storageDir", this.appSettings.getString("storageDir",""));
+        startActivityForResult(syncIntent, ACTIVITY_SYNCHRONIZE);
     }
 
     public boolean runCapture() {
         Intent captureIntent = new Intent();
         captureIntent.setClassName("com.matburt.mobileorg",
                                    "com.matburt.mobileorg.Capture");
-        startActivityForResult(captureIntent, 3);
+        startActivityForResult(captureIntent, ACTIVITY_CAPTURE);
         return true;
     }
 
@@ -362,62 +363,21 @@ public class MobileOrgActivity extends ListActivity
         return this.appSettings.getString("storageMode", "");
     }
 
-    protected Synchronizer getSynchronizer()
-    {
-        String userSynchro = this.appSettings.getString("syncSource","");
-        if (userSynchro == null || userSynchro.length() == 0){
-            this.onShowSettings();
-            return null;
-        }
-        else if (userSynchro.equals("webdav")) {
-            return new WebDAVSynchronizer(this);
-        }
-        else if (userSynchro.equals("sdcard")) {
-            return new SDCardSynchronizer(this);
-        }
-        else {
-            final Synchronizer sync = getSynchPluginInstance(userSynchro);
-            if(sync == null) {
-                Toast.makeText(this,
-                               R.string.error_synchronizer_plugin_failed, 
-                               Toast.LENGTH_LONG).show();
-            }
-            return sync;
-
-        }
-    }
-
-    protected Synchronizer getSynchPluginInstance(String packageName)
-    {
-        try {
-            Context context = ((Context)this).createPackageContext(packageName, CONTEXT_INCLUDE_CODE);
-            Class<?> c = context.getClassLoader().loadClass(packageName + ".Synchronizer");
-            Object inst = (Object)(c.getConstructor(new Class[] {Activity.class}).newInstance( new Object[] {this}));
-
-            //class/interface identity doesn't work across peer ClassLoaders so
-            //we can't use the synchronizer instance via the Synchronizer
-            //interface - need to resort to reflection instead.
-            return new SynchronizerProxy(inst);
-        }
-        catch(ClassNotFoundException ex){
-            Log.e("MobileOrg", "Exception:"+ex);
-        }
-        catch(NoSuchMethodException ex){
-            Log.e("MobileOrg", "Exception:"+ex);
-        }
-        catch(InstantiationException ex){
-            Log.e("MobileOrg", "Exception:"+ex);
-        }
-        catch(NameNotFoundException ex){
-            Log.e("MobileOrg", "Exception:"+ex);
-        }
-        catch(IllegalAccessException ex){
-            Log.e("MobileOrg", "Exception:"+ex);
-        }
-        catch(InvocationTargetException ex)
+    protected void addOrUpdateFiles() {
+        File folder = new File(MobileOrgApplication.getOrgBasePath(this.appSettings));
+        File[] files = folder.listFiles();
+        MobileOrgDatabase appdb = new MobileOrgDatabase((Context)this);
+        for(File file : files)
         {
+            if(!file.getName().endsWith(".org") &&
+               !file.getName().endsWith(".org.gpg"))
+            {
+                continue;
+            }
+            
+            appdb.addOrUpdateFile(file.getName(), file.getName());
         }
-
-        return null;
+        appdb.close();
     }
+
 }

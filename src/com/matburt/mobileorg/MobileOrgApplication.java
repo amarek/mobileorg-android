@@ -11,11 +11,13 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageItemInfo;
 import android.content.pm.ResolveInfo;
+import android.content.pm.ActivityInfo;
 
 public class MobileOrgApplication extends Application {
     public Node rootNode = null;
     public ArrayList<Integer> nodeSelection;
-    public static final String SYNCHRONIZER_PLUGIN_ACTION = "com.matburt.mobileorg.SYNCHRONIZE";
+    public static final String SYNCHRONIZER_PLUGIN_ACTION_SYNC = "com.matburt.mobileorg.SYNCHRONIZE";
+    public static final String SYNCHRONIZER_PLUGIN_ACTION_SETTINGS = "com.matburt.mobileorg.SYNC_SETTINGS";
 
     public void pushSelection(int selectedNode)
     {
@@ -41,18 +43,18 @@ public class MobileOrgApplication extends Application {
         return thisNode;
     }
 
-    static List<PackageItemInfo> discoverSynchronizerPlugins(Context context)
+    static List<ActivityInfo> discoverSynchronizerPlugins(Context context)
     {
-        Intent discoverSynchro = new Intent(SYNCHRONIZER_PLUGIN_ACTION);
+        Intent discoverSynchro = new Intent(SYNCHRONIZER_PLUGIN_ACTION_SETTINGS);
         List<ResolveInfo> packages = context.getPackageManager().queryIntentActivities(discoverSynchro,0);
         Log.d("MobileOrg","Found " + packages.size() + " total synchronizer plugins");
 
-        ArrayList<PackageItemInfo> out = new ArrayList<PackageItemInfo>();
+        ArrayList<ActivityInfo> out = new ArrayList<ActivityInfo>();
 
         for (ResolveInfo info : packages)
         {
             out.add(info.activityInfo);
-            Log.d("MobileOrg","Found synchronizer plugin: "+info.activityInfo.packageName);            
+            Log.d("MobileOrg","Found synchronizer plugin: "+info.activityInfo.packageName + ":" + info.activityInfo.name);            
         }
         return out;
     }

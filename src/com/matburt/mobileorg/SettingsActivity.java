@@ -11,6 +11,7 @@ import android.preference.Preference.OnPreferenceClickListener;
 import android.widget.Toast;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.PackageItemInfo;
+import android.content.pm.ActivityInfo;
 import android.util.Log;
 import java.util.List;
 
@@ -20,15 +21,13 @@ public class SettingsActivity extends PreferenceActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Intent prefsIntent = getIntent();
-        int resourceID = prefsIntent.getIntExtra("prefs",R.xml.preferences);
-        addPreferencesFromResource(resourceID);                
+        addPreferencesFromResource(R.xml.preferences);                
         populateSyncSources();
     }
 
     protected void populateSyncSources()
     {
-        List<PackageItemInfo> synchronizers = MobileOrgApplication.discoverSynchronizerPlugins((Context)this);
+        List<ActivityInfo> synchronizers = MobileOrgApplication.discoverSynchronizerPlugins((Context)this);
 
         ListPreference syncSource = (ListPreference)findPreference("syncSource");
 
@@ -42,13 +41,13 @@ public class SettingsActivity extends PreferenceActivity
         //populate the sync source list and prepare Intents for
         //discovered synchronizers
         int offset = syncSource.getEntries().length;
-        for (PackageItemInfo info : synchronizers)
+        for (ActivityInfo info : synchronizers)
         {
             entries[offset] = info.nonLocalizedLabel;
-            values[offset] = info.packageName;
-            Intent syncIntent = new Intent();
-            syncIntent.setClassName(info.packageName, info.packageName + ".SettingsActivity");
-            SynchronizerPreferences.syncIntents.put(info.packageName,syncIntent);
+            values[offset] = info.packageName + ":" + info.name;
+            Intent syncIntent = new Intent(MobileOrgApplication.SYNCHRONIZER_PLUGIN_ACTION_SETTINGS);
+            syncIntent.setClassName(info.packageName, info.name);
+            SynchronizerPreferences.syncIntents.put(info.packageName + ":" + info.name,syncIntent);
             offset++;
         }
 
