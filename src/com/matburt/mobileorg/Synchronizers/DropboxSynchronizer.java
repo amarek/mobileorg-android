@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import java.util.ArrayList;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -108,6 +110,10 @@ public class DropboxSynchronizer implements SynchronizerInterface {
         }
 	}
 
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        return new ArrayList<String>();
+    }
     
     /**
      * This handles authentication if the user's token & secret

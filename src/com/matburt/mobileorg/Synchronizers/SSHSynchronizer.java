@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.util.ArrayList;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -180,6 +181,11 @@ public class SSHSynchronizer implements SynchronizerInterface {
             throw new IOException(e);
         }
         return new BufferedReader(new StringReader(contents.toString()));
+    }
+
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        return new ArrayList<String>();
     }
 
 	@Override

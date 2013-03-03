@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.regex.Pattern;
+import java.util.ArrayList;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -205,6 +206,11 @@ public class WebDAVSynchronizer implements SynchronizerInterface {
             throw e;
         }
 	}
+
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        return new ArrayList<String>();
+    }
 
     /* See: http://stackoverflow.com/questions/1217141/self-signed-ssl-acceptance-android */
     private void handleTrustRelationship(Context c) {

@@ -2,6 +2,7 @@ package com.matburt.mobileorg.Synchronizers;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.security.cert.CertificateException;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -21,6 +22,9 @@ public interface SynchronizerInterface {
 	 * @param contents Content of the new file
 	 */
 	public void putRemoteFile(String filename, String contents)
+        throws IOException;
+
+    public ArrayList<String> listRemoteFiles()
         throws IOException;
 
 	/**

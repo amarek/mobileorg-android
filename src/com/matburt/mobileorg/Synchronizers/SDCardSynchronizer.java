@@ -3,11 +3,14 @@ package com.matburt.mobileorg.Synchronizers;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import android.content.Context;
 import android.preference.PreferenceManager;
@@ -47,6 +50,20 @@ public class SDCardSynchronizer implements SynchronizerInterface {
 		return new BufferedReader(new InputStreamReader(fileIS));
 	}
 
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        File dir = new File(this.remotePath);
+        File[] files = dir.listFiles(new FilenameFilter() {
+                public boolean accept(File dir, String filename) {
+                    return filename.endsWith(".org") || filename.endsWith(".org.gpg");
+                }
+            });
+        ArrayList<String> names = new ArrayList<String>();
+        for(File file : files) {
+            names.add(file.getName());
+        }
+        return names;
+    }
 
 	@Override
 	public void postSynchronize() {		

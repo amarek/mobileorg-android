@@ -1,6 +1,8 @@
 package com.matburt.mobileorg.Synchronizers;
 
 import java.io.BufferedReader;
+import java.util.ArrayList;
+import java.io.IOException;
 
 public class NullSynchronizer implements SynchronizerInterface {
 
@@ -18,6 +20,10 @@ public class NullSynchronizer implements SynchronizerInterface {
         return null;
     }
 
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        return new ArrayList<String>();
+    }
 
     @Override
 	public void postSynchronize() {

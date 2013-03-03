@@ -208,6 +208,11 @@ private static final String BASE_TOKEN_NAME = "Ubuntu One @ MobileOrg:";
         return null;
     }
 
+    public ArrayList<String> listRemoteFiles() throws IOException
+    {
+        return new ArrayList<String>();
+    }
+
     public ArrayList<String> getDirectoryList(String directory) {
         ArrayList<String> directories = new ArrayList<String>();
 		try {
